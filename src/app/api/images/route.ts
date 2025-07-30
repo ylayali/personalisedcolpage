@@ -157,7 +157,6 @@ export async function POST(request: NextRequest) {
             if (imageFile) {
                 // This is a coloring page generation request - use edit endpoint with photo but force higher quality
                 const n = parseInt((formData.get('n') as string) || '1', 10);
-                const requestedSize = formData.get('size') as string;
                 
                 // For coloring pages, we'll use the largest available square size to maintain quality
                 // Then users can crop to portrait if needed
