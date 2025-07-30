@@ -54,7 +54,12 @@ export async function POST(request: NextRequest) {
 
     if (!process.env.OPENAI_API_KEY) {
         console.error('OPENAI_API_KEY is not set.');
-        return NextResponse.json({ error: 'Server configuration error: API key not found.' }, { status: 500 });
+        return NextResponse.json({ error: 'Server configuration error: OpenAI API key not found.' }, { status: 500 });
+    }
+
+    if (!process.env.REPLICATE_API_TOKEN) {
+        console.error('REPLICATE_API_TOKEN is not set.');
+        return NextResponse.json({ error: 'Server configuration error: Replicate API token not found.' }, { status: 500 });
     }
     try {
         let effectiveStorageMode: 'fs' | 'indexeddb';

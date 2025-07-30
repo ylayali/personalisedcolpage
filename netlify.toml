@@ -11,15 +11,4 @@
 
 [functions]
   node_bundler = "esbuild"
-
-# Redirect all API routes to Netlify Functions
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-# Handle Next.js routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+  directory = ".netlify/functions"
