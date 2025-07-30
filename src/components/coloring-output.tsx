@@ -1,7 +1,6 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { Loader2, Download, Printer } from 'lucide-react';
 import Image from 'next/image';
 import * as React from 'react';

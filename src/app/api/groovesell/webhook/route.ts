@@ -28,7 +28,7 @@ function verifyWebhookSignature(payload: string, signature: string, secret: stri
   )
 }
 
-function getCreditsForPurchase(subscriptionType: 'monthly' | 'yearly'): number {
+function getCreditsForPurchase(): number {
   // Both plans get 5 credits per month
   // Monthly: 5 credits
   // Yearly: 5 credits (monthly renewal will add more)
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handlePurchaseCompleted(supabase: any, data: GrooveSellWebhook) {
+async function handlePurchaseCompleted(supabase: Awaited<ReturnType<typeof createClient>>, data: GrooveSellWebhook) {
   try {
     // Find user by email
     const { data: users, error: userError } = await supabase
@@ -107,7 +107,7 @@ async function handlePurchaseCompleted(supabase: any, data: GrooveSellWebhook) {
     }
 
     const userId = users.id
-    const creditsToAdd = getCreditsForPurchase(data.subscription_type || 'monthly')
+    const creditsToAdd = getCreditsForPurchase()
 
     // Add credits to user account
     const { error: addCreditsError } = await supabase
@@ -160,7 +160,7 @@ async function handlePurchaseCompleted(supabase: any, data: GrooveSellWebhook) {
   }
 }
 
-async function handleSubscriptionRenewed(supabase: any, data: GrooveSellWebhook) {
+async function handleSubscriptionRenewed(supabase: Awaited<ReturnType<typeof createClient>>, data: GrooveSellWebhook) {
   try {
     // Find user by email
     const { data: users, error: userError } = await supabase
@@ -175,7 +175,7 @@ async function handleSubscriptionRenewed(supabase: any, data: GrooveSellWebhook)
     }
 
     const userId = users.id
-    const creditsToAdd = getCreditsForPurchase(data.subscription_type || 'monthly')
+    const creditsToAdd = getCreditsForPurchase()
 
     // Add monthly credits
     await supabase.rpc('add_credits', { 
@@ -203,7 +203,7 @@ async function handleSubscriptionRenewed(supabase: any, data: GrooveSellWebhook)
   }
 }
 
-async function handleSubscriptionCancelled(supabase: any, data: GrooveSellWebhook) {
+async function handleSubscriptionCancelled(supabase: Awaited<ReturnType<typeof createClient>>, data: GrooveSellWebhook) {
   try {
     const { error } = await supabase
       .from('user_profiles')
@@ -220,7 +220,7 @@ async function handleSubscriptionCancelled(supabase: any, data: GrooveSellWebhoo
   }
 }
 
-async function handleRefund(supabase: any, data: GrooveSellWebhook) {
+async function handleRefund(supabase: Awaited<ReturnType<typeof createClient>>, data: GrooveSellWebhook) {
   try {
     // Find the original transaction
     const { data: transaction, error: transactionError } = await supabase
@@ -242,7 +242,6 @@ async function handleRefund(supabase: any, data: GrooveSellWebhook) {
       .single()
 
     if (userProfile) {
-      const currentAvailable = userProfile.total_credits - userProfile.used_credits
       const creditsToRemove = Math.min(transaction.credits_added, userProfile.total_credits)
       
       await supabase

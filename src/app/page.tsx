@@ -5,10 +5,9 @@ import { ColoringOutput } from '@/components/coloring-output';
 import { AuthForm } from '@/components/auth-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { db, type ImageRecord } from '@/lib/db';
+import { db } from '@/lib/db';
 import { createClient } from '@/lib/supabase/client';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { LogOut, CreditCard, User, Loader2 } from 'lucide-react';
+import { LogOut, CreditCard, Loader2 } from 'lucide-react';
 import * as React from 'react';
 
 type ApiImageResponseItem = {
@@ -35,8 +34,8 @@ if (explicitModeClient === 'fs') {
 }
 
 export default function HomePage() {
-    const [user, setUser] = React.useState<any>(null);
-    const [userProfile, setUserProfile] = React.useState<any>(null);
+    const [user, setUser] = React.useState<{ id: string; email?: string } | null>(null);
+    const [userProfile, setUserProfile] = React.useState<{ total_credits: number; used_credits: number; subscription_status: string } | null>(null);
     const [isLoading, setIsLoading] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
     const [latestImageBatch, setLatestImageBatch] = React.useState<{ path: string; filename: string }[] | null>(null);
@@ -47,7 +46,6 @@ export default function HomePage() {
     const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
 
     const supabase = createClient();
-    const allDbImages = useLiveQuery<ImageRecord[] | undefined>(() => db.images.toArray(), []);
 
     // Check authentication status and load user profile
     React.useEffect(() => {
@@ -379,7 +377,7 @@ export default function HomePage() {
                     <Alert className='border-yellow-500/50 bg-yellow-900/20 text-yellow-300'>
                         <AlertTitle>Subscribe for More Credits</AlertTitle>
                         <AlertDescription>
-                            You've used your free credits! Subscribe for $9.95/month or $97/year to get 5 coloring pages per month.{' '}
+                            You&apos;ve used your free credits! Subscribe for $9.95/month or $97/year to get 5 coloring pages per month.{' '}
                             <button
                                 onClick={handlePurchaseCredits}
                                 className='underline hover:text-yellow-200'
