@@ -155,23 +155,25 @@ export async function POST(request: NextRequest) {
             const imageFile = formData.get('image_0') as File | null;
             
             if (imageFile) {
-                // This is a coloring page generation request - use the edit endpoint with the photo
+                // This is a coloring page generation request - use edit endpoint with photo but force higher quality
                 const n = parseInt((formData.get('n') as string) || '1', 10);
                 const requestedSize = formData.get('size') as string;
-                // Map portrait size to closest supported edit size
-                const size: OpenAI.Images.ImageEditParams['size'] = requestedSize === '1024x1536' ? '1024x1024' : '1024x1024';
+                
+                // For coloring pages, we'll use the largest available square size to maintain quality
+                // Then users can crop to portrait if needed
+                const size: OpenAI.Images.ImageEditParams['size'] = '1024x1024';
                 const quality = (formData.get('quality') as OpenAI.Images.ImageEditParams['quality']) || 'high';
 
                 const params: OpenAI.Images.ImageEditParams = {
                     model,
-                    prompt,
+                    prompt: `${prompt} Create this as a high-quality portrait-oriented coloring page suitable for printing on standard paper (8.5x11 inches). Ensure the design fills the frame vertically with appropriate margins.`,
                     image: [imageFile],
                     n: Math.max(1, Math.min(n || 1, 10)),
                     size,
                     quality: quality === 'auto' ? undefined : quality
                 };
 
-                console.log('Calling OpenAI edit with coloring page params:', {
+                console.log('Calling OpenAI edit with coloring page params (optimized for portrait):', {
                     ...params,
                     image: `[${imageFile.name}]`
                 });
