@@ -1,14 +1,8 @@
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import path from 'path';
 import { createClient } from '@/lib/supabase/server';
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    baseURL: process.env.OPENAI_API_BASE_URL
-});
 
 const outputDir = path.resolve(process.cwd(), 'generated-images');
 
@@ -147,125 +141,73 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing required parameters: mode and prompt' }, { status: 400 });
         }
 
-        let result: OpenAI.Images.ImagesResponse;
-        const model = 'gpt-image-1';
-
-        if (mode === 'generate') {
-            // Check if this is a coloring page request (has image_0 file)
-            const imageFile = formData.get('image_0') as File | null;
-            
-            if (imageFile) {
-                // This is a coloring page generation request - use edit endpoint with photo but force higher quality
-                const n = parseInt((formData.get('n') as string) || '1', 10);
-                
-                // For coloring pages, we'll use the largest available square size to maintain quality
-                // Then users can crop to portrait if needed
-                const size: OpenAI.Images.ImageEditParams['size'] = '1024x1024';
-                const quality = (formData.get('quality') as OpenAI.Images.ImageEditParams['quality']) || 'high';
-
-                const params: OpenAI.Images.ImageEditParams = {
-                    model,
-                    prompt: `${prompt} Create this as a high-quality portrait-oriented coloring page suitable for printing on standard paper (8.5x11 inches). Ensure the design fills the frame vertically with appropriate margins.`,
-                    image: [imageFile],
-                    n: Math.max(1, Math.min(n || 1, 10)),
-                    size,
-                    quality: quality === 'auto' ? undefined : quality
-                };
-
-                console.log('Calling OpenAI edit with coloring page params (optimized for portrait):', {
-                    ...params,
-                    image: `[${imageFile.name}]`
-                });
-                result = await openai.images.edit(params);
-            } else {
-                // Regular generation request
-                const n = parseInt((formData.get('n') as string) || '1', 10);
-                const size = (formData.get('size') as OpenAI.Images.ImageGenerateParams['size']) || '1024x1024';
-                const quality = (formData.get('quality') as OpenAI.Images.ImageGenerateParams['quality']) || 'auto';
-                const output_format =
-                    (formData.get('output_format') as OpenAI.Images.ImageGenerateParams['output_format']) || 'png';
-                const output_compression_str = formData.get('output_compression') as string | null;
-                const background =
-                    (formData.get('background') as OpenAI.Images.ImageGenerateParams['background']) || 'auto';
-                const moderation =
-                    (formData.get('moderation') as OpenAI.Images.ImageGenerateParams['moderation']) || 'auto';
-
-                const params: OpenAI.Images.ImageGenerateParams = {
-                    model,
-                    prompt,
-                    n: Math.max(1, Math.min(n || 1, 10)),
-                    size,
-                    quality,
-                    output_format,
-                    background,
-                    moderation
-                };
-
-                if ((output_format === 'jpeg' || output_format === 'webp') && output_compression_str) {
-                    const compression = parseInt(output_compression_str, 10);
-                    if (!isNaN(compression) && compression >= 0 && compression <= 100) {
-                        params.output_compression = compression;
-                    }
-                }
-
-                console.log('Calling OpenAI generate with params:', params);
-                result = await openai.images.generate(params);
-            }
-        } else if (mode === 'edit') {
-            const n = parseInt((formData.get('n') as string) || '1', 10);
-            const size = (formData.get('size') as OpenAI.Images.ImageEditParams['size']) || 'auto';
-            const quality = (formData.get('quality') as OpenAI.Images.ImageEditParams['quality']) || 'auto';
-
-            const imageFiles: File[] = [];
-            for (const [key, value] of formData.entries()) {
-                if (key.startsWith('image_') && value instanceof File) {
-                    imageFiles.push(value);
-                }
-            }
-
-            if (imageFiles.length === 0) {
-                return NextResponse.json({ error: 'No image file provided for editing.' }, { status: 400 });
-            }
-
-            const maskFile = formData.get('mask') as File | null;
-
-            const params: OpenAI.Images.ImageEditParams = {
-                model,
-                prompt,
-                image: imageFiles,
-                n: Math.max(1, Math.min(n || 1, 10)),
-                size: size === 'auto' ? undefined : size,
-                quality: quality === 'auto' ? undefined : quality
-            };
-
-            if (maskFile) {
-                params.mask = maskFile;
-            }
-
-            console.log('Calling OpenAI edit with params:', {
-                ...params,
-                image: `[${imageFiles.map((f) => f.name).join(', ')}]`,
-                mask: maskFile ? maskFile.name : 'N/A'
-            });
-            result = await openai.images.edit(params);
-        } else {
-            return NextResponse.json({ error: 'Invalid mode specified' }, { status: 400 });
+        // Check if this is a coloring page request (has image_0 file)
+        const imageFile = formData.get('image_0') as File | null;
+        
+        if (!imageFile) {
+            return NextResponse.json({ error: 'Image file is required for coloring page generation' }, { status: 400 });
         }
 
-        console.log('OpenAI API call successful.');
+        // Convert the image file to base64 for Replicate API
+        const imageBuffer = await imageFile.arrayBuffer();
+        const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+        const imageDataUri = `data:${imageFile.type};base64,${imageBase64}`;
 
-        if (!result || !Array.isArray(result.data) || result.data.length === 0) {
-            console.error('Invalid or empty data received from OpenAI API:', result);
+        // Prepare Replicate API request
+        const replicatePayload = {
+            input: {
+                prompt: prompt,
+                quality: 'high',
+                background: 'auto',
+                moderation: 'low',
+                aspect_ratio: '2:3', // This gives us the portrait orientation!
+                input_images: [{ value: { path: imageDataUri } }],
+                output_format: 'png',
+                input_fidelity: 'high',
+                openai_api_key: process.env.OPENAI_API_KEY,
+                number_of_images: 1,
+                output_compression: 90
+            }
+        };
+
+        console.log('Calling Replicate API for portrait coloring page generation');
+
+        // Call Replicate API
+        const replicateResponse = await fetch('https://api.replicate.com/v1/models/openai/gpt-image-1/predictions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'wait'
+            },
+            body: JSON.stringify(replicatePayload)
+        });
+
+        if (!replicateResponse.ok) {
+            const errorText = await replicateResponse.text();
+            console.error('Replicate API error:', errorText);
+            throw new Error(`Replicate API failed: ${replicateResponse.status} ${errorText}`);
+        }
+
+        const replicateResult = await replicateResponse.json();
+        console.log('Replicate API call successful');
+
+        if (!replicateResult.output || !Array.isArray(replicateResult.output) || replicateResult.output.length === 0) {
+            console.error('Invalid or empty data received from Replicate API:', replicateResult);
             return NextResponse.json({ error: 'Failed to retrieve image data from API.' }, { status: 500 });
         }
 
+        // Process the results - Replicate returns URLs, we need to fetch and convert to base64
         const savedImagesData = await Promise.all(
-            result.data.map(async (imageData, index) => {
-                if (!imageData.b64_json) {
-                    console.error(`Image data ${index} is missing b64_json.`);
-                    throw new Error(`Image data at index ${index} is missing base64 data.`);
+            replicateResult.output.map(async (imageUrl: string, index: number) => {
+                // Fetch the image from the URL
+                const imageResponse = await fetch(imageUrl);
+                if (!imageResponse.ok) {
+                    throw new Error(`Failed to fetch generated image: ${imageResponse.status}`);
                 }
-                const buffer = Buffer.from(imageData.b64_json, 'base64');
+                
+                const imageBuffer = await imageResponse.arrayBuffer();
+                const imageBase64 = Buffer.from(imageBuffer).toString('base64');
                 const timestamp = Date.now();
 
                 const fileExtension = validateOutputFormat(formData.get('output_format'));
@@ -274,14 +216,13 @@ export async function POST(request: NextRequest) {
                 if (effectiveStorageMode === 'fs') {
                     const filepath = path.join(outputDir, filename);
                     console.log(`Attempting to save image to: ${filepath}`);
-                    await fs.writeFile(filepath, buffer);
+                    await fs.writeFile(filepath, Buffer.from(imageBuffer));
                     console.log(`Successfully saved image: ${filename}`);
-                } else {
                 }
 
                 const imageResult: { filename: string; b64_json: string; path?: string; output_format: string } = {
                     filename: filename,
-                    b64_json: imageData.b64_json,
+                    b64_json: imageBase64,
                     output_format: fileExtension
                 };
 
@@ -295,7 +236,7 @@ export async function POST(request: NextRequest) {
 
         console.log(`All images processed. Mode: ${effectiveStorageMode}`);
 
-        return NextResponse.json({ images: savedImagesData, usage: result.usage });
+        return NextResponse.json({ images: savedImagesData });
     } catch (error: unknown) {
         console.error('Error in /api/images:', error);
 
