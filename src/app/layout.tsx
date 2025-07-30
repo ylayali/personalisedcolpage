@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-    title: 'gpt-image-1 playground',
-    description: "Generate and edit images using OpenAI's gpt-image-1 model.",
+    title: 'Personalised Coloring Page Generator',
+    description: 'Create personalized coloring pages from your photos. Upload a picture and transform it into beautiful coloring pages for kids and adults.',
     icons: {
         icon: '/favicon.svg'
     }

@@ -320,7 +320,7 @@ export default function HomePage() {
             <main className='flex min-h-screen items-center justify-center bg-black p-4'>
                 <div className='w-full max-w-md'>
                     <div className='text-center mb-8'>
-                        <h1 className='text-3xl font-bold text-white mb-2'>Personalized Coloring Pages</h1>
+                        <h1 className='text-3xl font-bold text-white mb-2'>Personalised Coloring Page Generator</h1>
                         <p className='text-white/60'>Sign up to get 3 free coloring pages</p>
                     </div>
                     <AuthForm 
@@ -341,7 +341,7 @@ export default function HomePage() {
                 {/* Header with user info */}
                 <div className='flex items-center justify-between mb-8'>
                     <div className='text-center flex-1'>
-                        <h1 className='text-3xl font-bold text-white mb-2'>Personalized Coloring Pages</h1>
+                        <h1 className='text-3xl font-bold text-white mb-2'>Personalised Coloring Page Generator</h1>
                         <p className='text-white/60'>Upload a photo to create unique coloring pages</p>
                     </div>
                     <div className='flex items-center gap-4'>
