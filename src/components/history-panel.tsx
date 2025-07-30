@@ -1,6 +1,24 @@
 'use client';
 
-import type { HistoryMetadata } from '@/app/page';
+// This component is not used in the current coloring page app
+type HistoryMetadata = {
+    timestamp: number;
+    images: Array<{ filename: string; path: string }>;
+    mode: string;
+    prompt: string;
+    durationMs: number;
+    quality: string;
+    background: string;
+    moderation: string;
+    costDetails?: {
+        estimated_cost_usd: number;
+        text_input_tokens: number;
+        image_input_tokens: number;
+        image_output_tokens: number;
+    };
+    storageModeUsed?: string;
+    output_format?: string;
+};
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';

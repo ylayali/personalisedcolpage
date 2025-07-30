@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, User, Palette, Activity } from 'lucide-react';
+import Image from 'next/image';
 import * as React from 'react';
 
 export type ColoringFormData = {
@@ -159,11 +160,14 @@ export function ColoringForm({ onSubmit, isLoading, userCredits }: ColoringFormP
                             />
                             {photoPreview && (
                                 <div className='h-16 w-16 overflow-hidden rounded border border-white/20'>
-                                    <img
-                                        src={photoPreview}
-                                        alt='Photo preview'
-                                        className='h-full w-full object-cover'
-                                    />
+                        <Image
+                            src={photoPreview}
+                            alt='Selected photo'
+                            width={80}
+                            height={80}
+                            className='h-20 w-20 rounded-lg object-cover'
+                            unoptimized
+                        />
                                 </div>
                             )}
                         </div>
